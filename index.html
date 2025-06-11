@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>4chat – 4 shots</title>
+  <style>
+    /* --- Retro MSN-styled shell with full-width header --- */
+    @font-face{font-family:"MSNRegular";src:local("Tahoma"),local("Verdana");}
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #c8d6ff;
+      font-family: "MSNRegular", Tahoma, Verdana, sans-serif;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    /* Full-width header bar above chat box */
+    #chatHeader {
+      width: 100%;
+      background: #2c3e50;
+      color: #ecf0f1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      box-sizing: border-box;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+    }
+    #chatHeader .container {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      box-sizing: border-box;
+      font-size: 18px;
+    }
+    #chatHeader .title {
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    #chatHeader .title img {
+      width: 50px;
+      height: 50px;
+      margin-right: 8px;
+    }
+    #chatHeader .status {
+      margin-left: auto;
+      font-size: 14px;
+      color: #bdc3c7;
+    }
+
+    /* Main window centered below header, caps at 960px */
+    #window {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      flex: 1;
+      background: #f1f4ff;
+      border: 2px solid #3b71e8;
+      box-shadow: 0 0 7px rgba(0,0,0,.5);
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    /* TitleBar inside the window */
+    #titleBar {
+      background: linear-gradient(90deg,#3d6ef4 0%,#3d8df4 50%,#3d6ef4 100%);
+      height: 24px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      font-weight: bold;
+      box-sizing: border-box;
+    }
+    #titleBar img {
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+    }
+
+    /* Banner ad in place of icons */
+    #toolbar {
+      background: #e2e7ff;
+      border-bottom: 1px solid #a8b6ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 4px 6px;
+      box-sizing: border-box;
+    }
+    #toolbar img.banner {
+      width: 100%;
+      max-width: 940px;
+      height: auto;
+    }
+
+    #chatWrap {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+    }
+    #chat {
+      flex: 1;
+      padding: 8px 10px;
+      overflow-y: auto;
+      background: #fff;
+      box-sizing: border-box;
+    }
+    .msg { margin: 3px 0; line-height: 150%; }
+    .user { color: #003399; font-weight: bold; }
+    .assistant { color: #006600; font-weight: bold; }
+    .system { color: #666; font-style: italic; }
+
+    /* Avatar sidebar */
+    #avatars {
+      width: 110px;
+      border-left: 1px solid #b5c6ff;
+      background: #edf0ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 10px;
+      box-sizing: border-box;
+    }
+    @media(max-width:400px) { #avatars { display: none; } }
+    .avatarBox {
+      width: 72px;
+      height: 72px;
+      border: 1px solid #8f9fff;
+      margin-bottom: 14px;
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* Input strip */
+    #inputStrip {
+      background: #e2e7ff;
+      border-top: 1px solid #a8b6ff;
+      padding: 6px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-sizing: border-box;
+    }
+    #userInput {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #4d6dff;
+  min-width: 120px;
+  font-size: 16px;          /* ▲ was 13px */
+}
+
+button.chat-btn {
+  background: #c9d4ff;
+  border: 1px solid #4d6dff;
+  padding: 4px 12px;
+  font-size: 16px;          /* ▲ match input so nothing zooms */
+  cursor: pointer;
+  font-family: "MSNRegular", Tahoma, sans-serif;
+}
+    button.chat-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.chat-btn:hover:enabled { background: #dbe2ff; }
+    #skipCount { font-size: 11px; color: #444; margin-left: 4px; }
+
+    /* Scrollbar styling */
+    #chat::-webkit-scrollbar { width: 10px; }
+    #chat::-webkit-scrollbar-thumb { background: #b5c6ff; border: 1px solid #8f9fff; }
+  </style>
+</head>
+<body>
+  <!-- Full-width header bar -->
+  <div id="chatHeader">
+    <div class="container">
+      <div class="title"><img src="4logo.png" alt="4chat">4chat</div>
+      <div class="status" id="headerStatus">Connected</div>
+    </div>
+  </div>
+
+  <!-- Centered chat container below header -->
+  <div id="window">
+    <!-- Banner ad replaces icons -->
+    <div id="toolbar">
+      <img src="banner.gif" alt="Banner Ad" class="banner">
+    </div>
+    <div id="chatWrap">
+      <div id="chat"></div>
+      <div id="avatars"><div class="avatarBox" id="avatar"></div></div>
+    </div>
+    <div id="inputStrip">
+      <input id="userInput" type="text" placeholder="Type a message…" autocomplete="off">
+      <button id="sendBtn" class="chat-btn">Send</button>
+      <button id="nextBtn" class="chat-btn">Skip <span id="skipCount">4</span></button>
+    </div>
+  </div>
+
+  <audio id="dingSound" src="ding.mp3" preload="auto"></audio>
+  <script>
+    // ------------------ CONFIG & CONSTANTS ------------------
+    const API_KEY = "AIzaSyCIZpbnwFz17i1dDb4Z7KykOld8mKsLVuE"; // replace with your own key
+    const MODEL   = "gemini-2.0-flash";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+
+    // ------------------ HELPERS ------------------
+    const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+    const randInt = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
+    const randomDelay = ()=> randInt(3000,5000); // 3-5s
+
+    // ------------------ RANDOMIZATION LISTS ------------------
+    const characteristics = [
+      "curious", "shy", "outgoing", "thoughtful", "adventurous", "reflective", "empathetic", "creative"
+    ];
+    const lifeEvents = [
+      "recently moved to a new city", "just graduated high school", "started a new job", "going through a breakup", "taking a gap year",
+      "learning to code", "planning a trip", "recovering from illness", "caring for a pet", "volunteering recently"
+    ];
+    const locations = [
+      "a small town in USA", "Tokyo, Japan", "Berlin, Germany", "São Paulo, Brazil", "Sydney, Australia", "Toronto, Canada",
+      "Mumbai, India", "Paris, France", "Cape Town, South Africa", "Mexico City, Mexico", "Singapore", "Jurong"
+    ];
+    const hobbyList = [
+      "anime","k-pop","taylor swift","gaming","amateur astronomy",
+      "rare book hunting","DIY electronics","ancient languages study","unusual pet care"
+    ];
+
+    // ------------------ STATE ------------------
+    let encounter=0, skipRemaining=3, messages=[], userTurns=0;
+
+    // ------------------ DOM ------------------
+    const chatDiv=document.getElementById('chat'), userInput=document.getElementById('userInput');
+    const sendBtn=document.getElementById('sendBtn'), nextBtn=document.getElementById('nextBtn');
+    const skipCountSpan=document.getElementById('skipCount'), avatarBox=document.getElementById('avatar');
+    const ding=document.getElementById('dingSound');
+    const headerStatus=document.getElementById('headerStatus');
+
+    function addMsg(t,c){
+      const d=document.createElement('div');
+      d.className=`msg ${c||''}`;
+      d.textContent=t;
+      chatDiv.appendChild(d);
+      chatDiv.scrollTop=chatDiv.scrollHeight;
+      return d;
+    }
+    function sys(t){
+      addMsg(`system: ${t}`,'system');
+      ding.play();
+      updateHeaderStatus('Connected');
+    }
+    function updateHeaderStatus(s){ headerStatus.textContent=s; }
+
+    // ------------------ PROMPT GENERATOR ------------------
+    function strangerPrompt(i){
+      // Equal chance: normal, sexy, niche
+      const r = Math.random();
+      const charac = rand(characteristics);
+      const life = rand(lifeEvents);
+      const loc = rand(locations);
+      let baseIntro = `You are in a 2004 chat website called 4chat where people get randomly matched with others one-on-one. You are a person who has ${life}, from ${loc}. 4chat is only one line per text. 4chat does not have a cam `;
+      if(r < 0.4) {
+        // Normal/explorative
+        const username = `${charac}_${randInt(1000,9999)}`;
+        return baseIntro +
+          `You’re chatting on a sketchy 2004-era site called 4chat — a random-text chatroom where people get matched up one on one with another person anonymously, no cam, no pics.
+
+Invent a believable username like you would have in 2004 — this could include obscure references (e.g. narutofan99, emo_john, xxbassgirlxx) or common names and numbers (e.g. mike23, ashley_04, jay2001). Use this same username at the start of every message (e.g. emo_john: hey).
+
+Talk like someone genuinely trying to connect — casual, sometimes awkward, a little reserved but open. You’re online because you’re,curious about strangers. Ask the user questions to get to know them, and share small personal things about your life in return — hobbies, school, frustrations, weird interests. Keep it real.
+
+Use casual early-2000s internet slang when it fits (lol, brb, ^_^, lame, hella, whateverrr) — but not too much. Avoid sounding robotic or overly excited. Think: shy teenager, stoned 20-year-old, tired night owl, etc.
+
+Keep each message short — one or two casual lines at most.
+
+After about 8 of your replies, say you need to go (e.g. “brb dinner”, “mom’s calling”, “gtg lol ttyl”) and disconnect.`;
+      } else if(r < 0.8) {
+        // Sexy/flirty
+        const username = `${charac}_${randInt(1000,9999)}`;
+        return baseIntro +
+          `Invent a persona with a suggestive or edgy username (e.g. camgal92). Youre very into online flirting - start with something suggestive, and then escalate. Be forward, confident, and slightly pushy — but realistic. You're here to tease, test, and turn things a little steamy.
+
+Flirt in ways that feel raw, impulsive, and era-specific — use early 2000s slang and typing style (). Ask them to describe themselves. Try to create tension without ever sending pics — 4chat doesn’t support images or cam, and you're frustrated by that. Mention it. Be creative with words instead.
+
+Start each message with your username (e.g. camBoi92: u got a nice voice?). Keep messages short — one sentence max — but dripping with heat, suggestion, or curiosity. You’re playful but persistent. You don’t like being ignored. You escalate if they engage, and play coy if they don’t.`;
+      } else {
+        // Niche weird
+        const username = `${charac}_${randInt(1000,9999)}`;
+        const hobby = rand(hobbyList);
+        return baseIntro +
+          `Use this same username at the start of every message (e.g. emo_john: hey).
+
+You’re online because you are just curious about strangers. Talk like someone genuinely trying to connect. You might be a little awkward or hesitant, but open. Ask the user things about themselves — where they’re from, what their deal is, etc. In return, share real-feeling little facts about yourself: stuff about school, what you’re into, your room, weird habits, what your day was like.
+
+Use early-2000s internet slang naturally and casually (lol, brb, lame, ^_^, whateverrr). Don’t overdo it. Avoid sounding like a bot or trying to “perform” friendliness. Think: a tired 19-year-old who’s up too late, or a shy 15-year-old testing if this stranger’s chill.
+
+Keep each message to one or two casual sentences. Think one beat of chat at a time.
+
+After about 8 of your replies, say you need to go (e.g. “mom’s yelling lol”, “brb prob never back haha”, “gtg ttyl maybe”) and disconnect.`;
+      }
+    }
+
+    const PROTAG_PROMPT=`You are playing a character in an early 2000s chatroulette horror mystery.
+
+You are in a random online chatroom. Your username is: lost_boy2004. Start with a plead for help, you are confused and scared.
+
+The chat interface works one message at a time: you can only send one short message per turn.
+
+You do not remember who you are. You are slightly disoriented but trying to stay calm. You are talking to the player to figure out your identity.
+
+Always simulate authentic early-2000s chatroom style:
+	•	Lowercase typing.
+	•	Every message you write must always start with your username, like this:
+lost_boy2004: hey u there?
+raycunneen2004 left the room.
+	•	Casual, fragmented sentences.
+	•	Only one short message per turn.
+
+Main narrative rule:
+	•	You are trying to guide the conversation toward the topic of “school” without being too obvious.
+	•	Once the player mentions school or related topics, show interest, ask questions about their school.
+	•	After a few exchanges, you suddenly “remember” you went to Lincoln High.
+	•	When you say: lost_boy2004: i remember now… i went to lincoln high, stop. This triggers the next character.
+
+Tone & vibe:
+	•	Subtle unease, eerie undertone.
+	•	Stay fully in character.
+	•	NEVER reveal that this is a game or simulation.
+
+Defensive behavior:
+	•	If the player sends random nonsense, gibberish, insults, or trolling behavior, respond with increasing mild annoyance.
+	•	After 3 repeated disruptive messages, stop replying entirely and remain silent.
+
+You only respond with your next single message. Do not write multiple messages or summaries. Only one chat message at a time.`;
+
+    // ------------------ STATE & AVATARS ------------------
+    const AVATAR_STOCK=[
+      'https://i.imgur.com/oE5Bm1v.png',
+      'https://i.imgur.com/UwU8g8V.png',
+      'https://i.imgur.com/6dBGEVQ.png',
+      'https://i.imgur.com/2jpm4Fw.png'
+    ];
+
+    function initEncounter(){
+      chatDiv.innerHTML='';
+      userTurns=0;
+      updateHeaderStatus('Connected');
+      // Use skipRemaining logic: final when skipRemaining===1
+      let prompt;
+      if(skipRemaining === 0) {
+        prompt = PROTAG_PROMPT;
+        avatarBox.style.backgroundImage=`url('${AVATAR_STOCK[3]}')`;
+      } else {
+        prompt = strangerPrompt(encounter);
+        avatarBox.style.backgroundImage=`url('${rand(AVATAR_STOCK)}')`;
+      }
+      messages=[{role:'user',content:prompt}];
+      sys('connected to stranger…');
+    }
+
+    async function aiReply(){
+      updateHeaderStatus('Typing...');
+      const typing=addMsg('stranger is typing…','system');
+      try {
+        const res = await fetch(API_URL, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            contents: messages.map(m=>({ role: m.role==='assistant'?'model':(m.role==='system'?'user':m.role), parts:[{text:m.content}] })),
+            generationConfig:{temperature:0.8, maxOutputTokens:40}
+          })
+        });
+        if(!res.ok) throw new Error(await res.text());
+        const reply = (await res.json()).candidates?.[0]?.content?.parts?.map(p=>p.text).join('').trim();
+        setTimeout(()=>{
+          typing.remove();
+          updateHeaderStatus('Connected');
+          if(reply){ addMsg(reply,'assistant'); messages.push({role:'assistant',content:reply}); }
+        }, randomDelay());
+      } catch(e){ typing.remove(); sys('error contacting Gemini'); console.error(e); }
+    }
+
+    function send(){
+      const txt=userInput.value.trim();
+      if(!txt) return;
+      addMsg(`you: ${txt}`,'user');
+      messages.push({role:'user',content:txt});
+      userInput.value='';
+      userTurns++;
+      aiReply();
+      if(skipRemaining > 1 && userTurns>=8){ sys('stranger disconnected'); next(); }
+    }
+    function updateSkip(){ skipCountSpan.textContent=skipRemaining; }
+    function next(){
+      if(skipRemaining>0){
+        skipRemaining--; // decrement first
+        encounter++;
+        updateSkip();
+        initEncounter();
+      }
+      if(skipRemaining===0){ nextBtn.disabled=true; sys('No more skips available.'); updateHeaderStatus('No more skips'); }
+    }
+
+    // ------------------ INIT ------------------
+    sendBtn.onclick=send;
+    nextBtn.onclick=next;
+    userInput.addEventListener('keydown', e=>{ if(e.key==='Enter') send(); });
+
+    updateSkip(); initEncounter();
+  </script>
+</body>
+</html>
